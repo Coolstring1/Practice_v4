@@ -1,10 +1,10 @@
 import { Stack } from 'expo-router';
 import { ConvexReactClient } from 'convex/react';
-import { ConvexAuthProvider } from "@convex-dev/auth/react";
+import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
 import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { config } from '@gluestack-ui/config';
 import { ENV } from '../config/env';
-import { secureStorage } from '../utils/storage';
+import { authClient, getConvexJwt } from '../hooks/useAuth';
 
 const convex = new ConvexReactClient(ENV.CONVEX_URL as string, {
   verbose: true,
@@ -12,7 +12,7 @@ const convex = new ConvexReactClient(ENV.CONVEX_URL as string, {
 
 export default function RootLayout() {
   return (
-    <ConvexAuthProvider client={convex} storage={secureStorage}>
+    <ConvexBetterAuthProvider client={convex} authClient={authClient}>
       <GluestackUIProvider config={config}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
@@ -21,6 +21,6 @@ export default function RootLayout() {
           <Stack.Screen name="(main)" />
         </Stack>
       </GluestackUIProvider>
-    </ConvexAuthProvider>
+    </ConvexBetterAuthProvider>
   );
 }

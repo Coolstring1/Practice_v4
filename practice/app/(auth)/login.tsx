@@ -2,19 +2,13 @@ import React, { useState } from 'react';
 import { useRouter, Link } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as WebBrowser from 'expo-web-browser';
 import {
   VStack,
-  FormControl,
-  FormControlLabel,
-  FormControlLabelText,
-  Input,
-  InputField,
-  Button,
-  ButtonText,
+  Box,
   Text,
   Heading,
   Center,
-  Box,
   Toast,
   useToast,
   ToastTitle,
@@ -22,37 +16,52 @@ import {
 } from '@gluestack-ui/themed';
 import { TouchableOpacity } from 'react-native';
 
-export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+WebBrowser.maybeCompleteAuthSession();
 
-  const { signIn } = useAuth();
+export default function LoginScreen() {
+  const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
   const toast = useToast();
 
-  const handleLogin = async () => {
-    setError('');
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/(main)/(tabs)');
+    }
+  }, [isAuthenticated]);
+
+  const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      await signIn("password", { email, password, flow: "signIn" });
-      router.replace('/(main)/(tabs)');
+      // Open our /api/auth/google endpoint which uses a real HTML form POST
+      // to Better Auth's sign-in endpoint. Form submissions are browser-level
+      // navigations, so Safari reliably persists cookies from the response.
+      const signInUrl = "https://dapper-loris-122.convex.site/api/auth/google";
+
+      const response = await WebBrowser.openAuthSessionAsync(
+        signInUrl,
+        "practice://auth/callback"
+      );
+
+      if (response.type === "success" && response.url) {
+        // The callback screen handles token storage and routing
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to login');
+      console.error("Google sign-in error:", err);
       toast.show({
         placement: "top",
         render: ({ id }) => {
           return (
             <Toast nativeID={"toast-" + id} action="error" variant="accent">
               <VStack space="xs">
-                <ToastTitle>Login Failed</ToastTitle>
-                <ToastDescription>{err.message || 'Please check your credentials.'}</ToastDescription>
+                <ToastTitle>Sign In Failed</ToastTitle>
+                <ToastDescription>{err.message || 'Could not sign in with Google.'}</ToastDescription>
               </VStack>
             </Toast>
-          )
-        }
-      })
+          );
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -69,42 +78,7 @@ export default function LoginScreen() {
           </Text>
         </Box>
 
-        <VStack space="md">
-          <FormControl isInvalid={!!error}>
-            <FormControlLabel mb="$1">
-              <FormControlLabelText color="#364153">Email</FormControlLabelText>
-            </FormControlLabel>
-            <Input size="xl" bg="white" borderWidth={1} borderColor="#E5E7EB" rounded="$lg">
-              <InputField
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                placeholder="your.email@example.com"
-                color="#0A0A0A"
-              />
-            </Input>
-          </FormControl>
-
-          <FormControl isInvalid={!!error}>
-            <FormControlLabel mb="$1">
-              <FormControlLabelText color="#364153">Password</FormControlLabelText>
-            </FormControlLabel>
-            <Input size="xl" bg="white" borderWidth={1} borderColor="#E5E7EB" rounded="$lg">
-              <InputField
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholder="Enter your password"
-                color="#0A0A0A"
-              />
-            </Input>
-          </FormControl>
-        </VStack>
-
-        {error ? <Text color="$red500" size="sm" textAlign="center">{error}</Text> : null}
-
-        <TouchableOpacity onPress={handleLogin} disabled={loading}>
+        <TouchableOpacity onPress={handleGoogleSignIn} disabled={loading}>
           <LinearGradient
             colors={['#155DFC', '#9810FA']}
             start={{ x: 0, y: 0 }}
@@ -118,7 +92,7 @@ export default function LoginScreen() {
             }}
           >
             <Text color="white" fontWeight="$bold" size="lg">
-              {loading ? 'Signing In...' : 'Sign In'}
+              {loading ? 'Signing In...' : 'Sign in with Google'}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -127,7 +101,7 @@ export default function LoginScreen() {
           <Text size="md" color="#4A5565">Don't have an account? </Text>
           <Link href="/(auth)/signup" asChild>
             <Text size="md" color="#155DFC" fontWeight="$bold">
-              Sign Up
+              Get Started
             </Text>
           </Link>
         </Box>
