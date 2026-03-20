@@ -1,5 +1,6 @@
 import { createClient } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
+import { bearer } from "better-auth/plugins";
 import type { GenericCtx } from "@convex-dev/better-auth/utils";
 import type { BetterAuthOptions } from "better-auth";
 import { betterAuth } from "better-auth";
@@ -20,31 +21,31 @@ export const authComponent = createClient<DataModel, typeof schema>(
 
 // Better Auth Options
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
-  const siteURL = process.env.SITE_URL!;
+  const siteURL = process.env.CONVEX_SITE_URL || "https://dummy.convex.site";
   return {
-    baseURL: siteURL,
+    baseURL: siteURL + "/api/auth",
     secret: process.env.BETTER_AUTH_SECRET,
     database: authComponent.adapter(ctx),
     socialProviders: {
       google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        clientId: process.env.GOOGLE_CLIENT_ID || "",
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
       },
     },
     trustedOrigins: [
       siteURL,
-      "https://dapper-loris-122.convex.site",
-      "https://dapper-loris-122.convex.cloud",
+      siteURL.replace(".site", ".cloud"),
+      "practice://auth/callback",
     ],
     session: {
-      // Accept session token from custom header (needed for React Native
-      // which can't send Cookie headers). Must match the header name in useAuth.ts
-      headerName: "x-better-auth-session-token",
       cookieCache: {
         enabled: true,
       },
     },
-    plugins: [convex({ authConfig })],
+    plugins: [
+      convex({ authConfig }),
+      bearer(),
+    ],
   } satisfies BetterAuthOptions;
 };
 

@@ -3,6 +3,7 @@ import { useRouter, Link } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
+import { ENV } from '../../config/env';
 import {
   VStack,
   Box,
@@ -33,7 +34,7 @@ export default function SignupScreen() {
   const handleGoogleSignUp = async () => {
     setLoading(true);
     try {
-      const signInUrl = "https://dapper-loris-122.convex.site/api/auth/google";
+      const signInUrl = `${ENV.CONVEX_SITE_URL}/api/auth/google`;
 
       const response = await WebBrowser.openAuthSessionAsync(
         signInUrl,

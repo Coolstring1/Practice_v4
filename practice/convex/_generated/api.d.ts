@@ -10,6 +10,7 @@
 
 import type * as analyses from "../analyses.js";
 import type * as auth from "../auth.js";
+import type * as debug from "../debug.js";
 import type * as http from "../http.js";
 import type * as seed from "../seed.js";
 import type * as services_adapters_geminiAdapter from "../services/adapters/geminiAdapter.js";
@@ -26,6 +27,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   analyses: typeof analyses;
   auth: typeof auth;
+  debug: typeof debug;
   http: typeof http;
   seed: typeof seed;
   "services/adapters/geminiAdapter": typeof services_adapters_geminiAdapter;

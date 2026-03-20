@@ -13,7 +13,7 @@ export const ENV = {
 
   // Convex
   CONVEX_URL: process.env.EXPO_PUBLIC_CONVEX_URL || '',
-  CONVEX_SITE_URL: process.env.EXPO_PUBLIC_CONVEX_SITE_URL || '',
+  CONVEX_SITE_URL: (process.env.EXPO_PUBLIC_CONVEX_SITE_URL || '').replace(/\/+$/, ''),
 
   // Dev Bypass
   DEV_BYPASS_AUTH: process.env.EXPO_PUBLIC_DEV_BYPASS_AUTH === 'true',

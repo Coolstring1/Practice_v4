@@ -3,6 +3,9 @@ import { useRouter, Link } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
+import * as SecureStore from 'expo-secure-store';
+import { useConvex } from 'convex/react';
+import { ENV } from '../../config/env';
 import {
   VStack,
   Box,
@@ -20,7 +23,8 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, refreshSession } = useAuth();
+  const convex = useConvex();
   const router = useRouter();
   const toast = useToast();
 
@@ -32,23 +36,60 @@ export default function LoginScreen() {
   }, [isAuthenticated]);
 
   const handleGoogleSignIn = async () => {
+    console.log("==========================================================================");
+    console.log("==================== [Login] handleGoogleSignIn CALLED ===================");
+    console.log("==========================================================================");
     setLoading(true);
     try {
-      // Open our /api/auth/google endpoint which uses a real HTML form POST
-      // to Better Auth's sign-in endpoint. Form submissions are browser-level
-      // navigations, so Safari reliably persists cookies from the response.
-      const signInUrl = "https://dapper-loris-122.convex.site/api/auth/google";
+      const signInUrl = `${ENV.CONVEX_SITE_URL}/api/auth/google`;
+      const redirectUri = "practice://auth/callback";
+      console.log("[Login] ENV.CONVEX_SITE_URL:", ENV.CONVEX_SITE_URL);
+      console.log("[Login] Final signInUrl:", signInUrl);
+      console.log("[Login] Expecting redirect back to:", redirectUri);
 
       const response = await WebBrowser.openAuthSessionAsync(
         signInUrl,
-        "practice://auth/callback"
+        redirectUri
       );
 
-      if (response.type === "success" && response.url) {
-        // The callback screen handles token storage and routing
+      console.log("[Login] WebBrowser response received:", {
+        type: response.type,
+        url: (response as any).url ? `${(response as any).url.slice(0, 30)}...` : "NONE",
+      });
+
+      if (response.type === "success" && (response as any).url) {
+        const url = (response as any).url;
+        console.log("[Login] Auth success, processing URL for tokens...");
+        
+        // Manual parsing since we're in the same context
+        const queryParams = new URL(url.replace("practice://", "http://")).searchParams;
+        const st = queryParams.get("st");
+        const jwt = queryParams.get("jwt");
+
+        console.log("[Login] Extracted tokens:", { hasSt: !!st, hasJwt: !!jwt });
+
+        if (st && jwt) {
+          console.log("[Login] Saving tokens to SecureStore...");
+          await SecureStore.setItemAsync("better-auth.session_token", st);
+          await SecureStore.setItemAsync("better-auth.convex_jwt", jwt);
+          
+          console.log("[Login] Tokens saved. Manually setting Convex auth and refreshing session...");
+          // CRITICAL: Immediately set auth so the next query uses it
+          await convex.setAuth(() => Promise.resolve(jwt));
+          
+          // CRITICAL: Refresh the Better Auth client session object
+          await refreshSession();
+          
+          console.log("[Login] State synced. Navigating to (main)...");
+          router.replace('/(main)/(tabs)');
+        } else {
+          console.error("[Login] Tokens missing from callback URL");
+        }
+      } else {
+        console.log("[Login] Auth browser did NOT return success:", response.type);
       }
     } catch (err: any) {
-      console.error("Google sign-in error:", err);
+      console.error("[Login] Google sign-in error (exception):", err);
       toast.show({
         placement: "top",
         render: ({ id }) => {
